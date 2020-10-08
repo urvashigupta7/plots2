@@ -15,8 +15,7 @@ class UsersController < ApplicationController
     recaptcha = verify_recaptcha(model: @user) if using_recaptcha
     @spamaway = Spamaway.new(spamaway_params) unless using_recaptcha
 
-    saved_user = @user.save
-    if ((@spamaway&.valid?) || recaptcha) && saved_user
+    if ((@spamaway&.valid?) || recaptcha) && @user.save # pass spamaway validation FIRST then try saving the user; https://github.com/publiclab/plots2/issues/8463
       if current_user.crypted_password.nil? # the user has not created a pwd in the new site
         flash[:warning] = I18n.t('users_controller.account_migrated_create_new_password')
         redirect_to "/profile/edit"
@@ -57,8 +56,8 @@ class UsersController < ApplicationController
     @password_verification = user_verification_params
     @user = current_user
     @user = User.find_by(username: params[:id]) if params[:id] && logged_in_as(['admin'])
-    if @user.valid_password?(user_verification_params["current_password"]) || user_verification_params["ui_update"].nil?
-      # correct password
+    if @user.valid_password?(user_verification_params["current_password"]) || user_verification_params["ui_update"].nil? || (user_verification_params["current_password"].blank? && user_verification_params["password"].blank? && user_verification_params["password_confirmation"].blank?)
+      # correct password or if any other field needs to be updated
       @user.attributes = user_params
       if @user.save
         if session[:openid_return_to] # for openid login, redirects back to openid auth process
@@ -470,7 +469,7 @@ class UsersController < ApplicationController
   end
 
   def user_verification_params
-    params.require(:user).permit(:ui_update, :current_password)
+    params.require(:user).permit(:ui_update, :current_password, :password, :password_confirmation)
   end
 
   def spamaway_params

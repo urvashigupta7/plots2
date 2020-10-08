@@ -1,30 +1,29 @@
 require "application_system_test_case"
 
 class SignupFormTest < ApplicationSystemTestCase
-  def setup
-    visit "/"
-  end
+    def setup
+      visit "/"
+    end
+  
+    test "the signup form is validated and rejects duplicate email and username" do 
+        visit "/signup" 
+       
+        assert_difference 'User.count', 0 do
+            #Signs up with an already-registered email 
+            fill_in("username-signup", with: "abc") 
+            fill_in("email", with: "jeff@pxlshp.com") 
+            fill_in("password1", with: "secretive") 
+            fill_in("password-confirmation", with: "secretive") 
+            find("#create-form #signup-button").click() 
+        end
 
-  test "the signup form is validated on page reload" do
-    visit "/signup"
-
-    #Signs up with registered email
-    fill_in("username-signup", with: "abc")
-    fill_in("email", with: "jeff@pxlshp.com")
-    fill_in("password1", with: "secretive")
-    fill_in("password-confirmation", with: "secretive")
-
-    find("#create-form #signup-button").click()
-    path = URI.parse(current_url).request_uri
-    assert_equal path, "/register"
-    #Searches for error
-    assert_selector("#error-message #errorExplanation", text: "Email")
-
-    fill_in("username-signup", with: "abc")
-    fill_in("email", with: "abc@publiclab.org")
-    fill_in("password1", with: "secretive")
-    fill_in("password-confirmation", with: "secretive")
-    #Checks if submit button is enabled
-    find_button("signup-button")
-  end
+        assert_difference 'User.count', 0 do
+            #Signs up with an already-registered username 
+            fill_in("username-signup", with: "jeff") 
+            fill_in("email", with: "random@publiclab.com") 
+            fill_in("password1", with: "secretive") 
+            fill_in("password-confirmation", with: "secretive")    
+            find("#create-form #signup-button").click() 
+        end
+    end 
 end
